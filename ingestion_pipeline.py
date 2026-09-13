@@ -2,7 +2,7 @@ import os
 import shutil
 from dotenv import load_dotenv
 
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader,PyMuPDFLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
@@ -11,11 +11,7 @@ load_dotenv()
 
 
 def load_documents(docs_path="docs"):
-    """Load all PDF files from the docs directory"""
     print(f"Loading documents from {docs_path}...")
-
-    if not os.path.exists(docs_path):
-        raise FileNotFoundError(f"Directory '{docs_path}' not found.")
 
     loader = DirectoryLoader(
         path=docs_path,
@@ -25,19 +21,21 @@ def load_documents(docs_path="docs"):
 
     documents = loader.load()
 
-    if not documents:
-        raise FileNotFoundError(f"No PDF files found inside '{docs_path}'.")
+    # Keep only pages with actual text
+    documents = [
+        doc for doc in documents
+        if doc.page_content and doc.page_content.strip()
+    ]
 
-    print(f"Loaded {len(documents)} pages.")
+    print(f"Loaded {len(documents)} pages with text.")
 
-    # Preview first 2 pages
-    for i, doc in enumerate(documents[:2]):
-        print(f"\nDocument {i+1}")
-        print("Source:", doc.metadata["source"])
-        print("Length:", len(doc.page_content))
-        print("Preview:", doc.page_content[:120], "...")
+    if len(documents) == 0:
+        raise ValueError(
+            "No readable text found in the PDF. The PDF may be scanned or image-based."
+        )
 
     return documents
+
 
 
 def split_documents(documents, chunk_size=1000, chunk_overlap=200):
