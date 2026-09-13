@@ -16,4 +16,7 @@ db/chroma_db/
 .DS_Store
 Thumbs.db
 
-docs
+# Ignore all PDFs and docs folder
+docs/
+# OR ignore only PDF files
+# docs/*.pdf
