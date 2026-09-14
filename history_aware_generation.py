@@ -7,8 +7,7 @@ os.environ["CHROMA_TELEMETRY_ENABLED"] = "False"
 
 from langchain_chroma import Chroma
 
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 load_dotenv()
@@ -21,8 +20,9 @@ if not GOOGLE_API_KEY:
 #
 PERSIST_DIRECTORY = "db/chroma_db"
 
-embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+embedding_model = GoogleGenerativeAIEmbeddings(
+    model="gemini-embedding-001",
+    google_api_key=os.getenv("GOOGLE_API_KEY")
 )
 
 db = Chroma(

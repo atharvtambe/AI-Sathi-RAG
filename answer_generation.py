@@ -2,8 +2,8 @@ import os
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.messages import SystemMessage, HumanMessage
 
 # Load environment variables
@@ -18,8 +18,9 @@ if not api_key:
 PERSIST_DIRECTORY = "db/chroma_db"
 
 # Same embedding model used during ingestion
-embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+embedding_model = GoogleGenerativeAIEmbeddings(
+    model="gemini-embedding-001",
+    google_api_key=os.getenv("GOOGLE_API_KEY")
 )
 
 # Load existing Chroma vector store

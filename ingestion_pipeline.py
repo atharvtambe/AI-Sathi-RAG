@@ -3,8 +3,8 @@ import shutil
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader,PyMuPDFLoader
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
 load_dotenv()
@@ -58,8 +58,9 @@ def create_vector_store(chunks, persist_directory="db/chroma_db"):
     """Create ChromaDB vector store using Hugging Face embeddings"""
     print("\nCreating embeddings...")
 
-    embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model = GoogleGenerativeAIEmbeddings(
+    model="gemini-embedding-001",
+    google_api_key=os.getenv("GOOGLE_API_KEY")
     )
 
     print("Creating ChromaDB...")
