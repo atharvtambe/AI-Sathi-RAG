@@ -183,16 +183,6 @@ Question:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -----------------------------
-# Clear Chat History Endpoint
-# -----------------------------
-@app.post("/clear-history")
-def clear_history():
-    chat_history.clear()
-    return {
-        "message": "Conversation history cleared successfully."
-    }
-
 
 # -----------------------------
 # View Chat History Endpoint
@@ -220,3 +210,16 @@ def history():
         "total_messages": len(history_data),
         "history": history_data,
     }
+    
+    
+# -----------------------------
+# Clear Chat History Endpoint
+# -----------------------------
+@app.post("/clear-history")
+def clear_history():
+    chat_history.clear()
+    return {
+        "message": "Conversation history cleared successfully."
+    }
+
+
