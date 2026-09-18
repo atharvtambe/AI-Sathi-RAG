@@ -2,12 +2,14 @@ import os
 from dotenv import load_dotenv
 import os
 
+from langchain_ollama import OllamaEmbeddings
+
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 os.environ["CHROMA_TELEMETRY_ENABLED"] = "False"
 
 from langchain_chroma import Chroma
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 load_dotenv()
@@ -20,10 +22,9 @@ if not GOOGLE_API_KEY:
 #
 PERSIST_DIRECTORY = "db/chroma_db"
 
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    google_api_key=os.getenv("GOOGLE_API_KEY")
-)
+embedding_model = OllamaEmbeddings(
+        model="nomic-embed-text"
+    )
 
 db = Chroma(
     persist_directory=PERSIST_DIRECTORY,
@@ -33,8 +34,8 @@ db = Chroma(
 
 
 
-model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+llm = ChatGoogleGenerativeAI(
+    model="gemini-3.6-flash",
     google_api_key=GOOGLE_API_KEY,
     temperature=0,
 )
@@ -64,7 +65,7 @@ def ask_question(user_question: str):
             HumanMessage(content=user_question)
         ]
 
-        rewritten = model.invoke(rewrite_messages)
+        rewritten = llm.invoke(rewrite_messages)
         search_question = rewritten.content.strip()
 
         print(f"🔍 Standalone Question: {search_question}")
@@ -119,7 +120,7 @@ Instructions:
         )
     ]
 
-    result = model.invoke(final_messages)
+    result = llm.invoke(final_messages)
     answer = result.content
 
 

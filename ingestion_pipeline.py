@@ -3,7 +3,9 @@ import shutil
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader,PyMuPDFLoader
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
+
+
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_chroma import Chroma
 
@@ -58,18 +60,17 @@ def create_vector_store(chunks, persist_directory="db/chroma_db"):
     """Create ChromaDB vector store using Hugging Face embeddings"""
     print("\nCreating embeddings...")
 
-    embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    google_api_key=os.getenv("GOOGLE_API_KEY")
+    embedding_model = OllamaEmbeddings(
+        model="nomic-embed-text"
     )
 
     print("Creating ChromaDB...")
 
     vectorstore = Chroma.from_documents(
-        documents=chunks,
-        embedding=embedding_model,
-        persist_directory=persist_directory,
-        collection_metadata={"hnsw:space": "cosine"}
+    documents=chunks,
+    embedding=embedding_model,
+    persist_directory="db/chroma_db",
+    collection_metadata={"hnsw:space": "cosine"}
     )
 
     print("Vector store created successfully!")

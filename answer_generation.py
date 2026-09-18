@@ -2,97 +2,167 @@ import os
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma
-
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import (
+    ChatGoogleGenerativeAI,
+    GoogleGenerativeAIEmbeddings,
+)
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_ollama import OllamaEmbeddings
 
-# Load environment variables
+# =====================================================
+# Load API Key
+# =====================================================
 load_dotenv()
 
-# Check Google API Key
 api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise ValueError("GOOGLE_API_KEY not found in .env file")
 
-# Chroma database path
+if not api_key:
+    raise ValueError("❌ GOOGLE_API_KEY not found in .env file.")
+
+# =====================================================
+# Chroma Database Location
+# =====================================================
 PERSIST_DIRECTORY = "db/chroma_db"
 
-# Same embedding model used during ingestion
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    google_api_key=os.getenv("GOOGLE_API_KEY")
-)
+# =====================================================
+# Gemini Embedding Model (Must match ingestion pipeline)
+# =====================================================
+embedding_model = OllamaEmbeddings(
+        model="nomic-embed-text"
+    )
 
-# Load existing Chroma vector store
+# =====================================================
+# Load Existing Chroma Database
+# =====================================================
 db = Chroma(
     persist_directory=PERSIST_DIRECTORY,
     embedding_function=embedding_model,
-    collection_metadata={"hnsw:space": "cosine"}
 )
 
-# Gemini LLM
-model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+print("✅ ChromaDB Loaded Successfully.")
+
+# =====================================================
+# Gemini 3.6 Flash Model
+# =====================================================
+llm = ChatGoogleGenerativeAI(
+    model="gemini-3.6-flash",
     google_api_key=api_key,
-    temperature=0
+    temperature=0,
 )
 
-# User query
-query = "What type  of certification is required for make a new flag?"
+# =====================================================
+# User Query
+# =====================================================
+query = input("\n🔍 Ask your BIS question:\n> ")
 
-# Retrieve relevant document chunks
-retriever = db.as_retriever(search_kwargs={"k": 5})
+# =====================================================
+# Retriever (MMR gives better diversity)
+# =====================================================
+retriever = db.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 5,
+        "fetch_k": 20,
+        "lambda_mult": 0.7,
+    },
+)
+
 relevant_docs = retriever.invoke(query)
 
-print("=" * 60)
-print("User Query:", query)
-print("=" * 60)
+print("\n" + "=" * 70)
+print("USER QUERY")
+print("=" * 70)
+print(query)
 
-# Check if any documents were retrieved
-if not relevant_docs:
-    print("No relevant documents found in the vector database.")
+if len(relevant_docs) == 0:
+    print("\n❌ No relevant documents found.")
     exit()
 
-# Build context from retrieved documents
+# =====================================================
+# Build Context
+# =====================================================
 context = ""
 
-print("\n--- Retrieved Context ---")
+print("\n" + "=" * 70)
+print("RETRIEVED DOCUMENTS")
+print("=" * 70)
+
 for i, doc in enumerate(relevant_docs, start=1):
-    print(f"\nDocument {i}")
-    print(f"Source: {doc.metadata.get('source')}")
-    print(f"Page: {doc.metadata.get('page', 'N/A')}")
-    print(doc.page_content[:300], "...\n")
 
-    context += doc.page_content + "\n\n"
+    source = doc.metadata.get("source", "Unknown Source")
+    page = doc.metadata.get("page", "N/A")
 
-# Prompt Gemini
+    print(f"\n📄 Document {i}")
+    print(f"Source : {source}")
+    print(f"Page   : {page}")
+    print("-" * 50)
+    print(doc.page_content[:300])
+    print("...")
+
+    context += f"""
+SOURCE: {source}
+PAGE: {page}
+
+CONTENT:
+{doc.page_content}
+
+---------------------------------------
+"""
+
+# =====================================================
+# Prompt for Gemini
+# =====================================================
 messages = [
     SystemMessage(
-        content=(
-            "You are a helpful RAG assistant. "
-            "Answer ONLY using the provided context. "
-            "Do not use outside knowledge. "
-            "If the answer is not present in the context, reply exactly:\n"
-            "'I don't have enough information from the provided documents.'"
-        )
+        content="""
+You are BIS AI Assistant built for Smart India Hackathon 2026.
+
+Your job is to answer questions ONLY from the retrieved BIS documents.
+
+Rules:
+1. Do NOT use outside knowledge.
+2. If information is missing, reply:
+   "I don't have enough information from the provided BIS documents."
+3. If multiple documents contain relevant information, combine them.
+4. Mention the document source and page number.
+5. Keep answers concise and factual.
+6. If the user asks about certification, clearly mention the certification scheme if present.
+"""
     ),
     HumanMessage(
         content=f"""
-Context:
+Retrieved BIS Context
+
 {context}
 
 Question:
 {query}
 
-Answer in a clear and concise way.
+Return your answer in this format:
+
+Answer:
+<answer>
+
+Source(s):
+- <source name> (Page <page>)
 """
     ),
 ]
 
-# Generate answer
-result = model.invoke(messages)
+# =====================================================
+# Generate Answer
+# =====================================================
+print("\n🤖 Generating answer with Gemini...\n")
 
-print("\n" + "=" * 60)
-print("Final Answer")
-print("=" * 60)
-print(result.content)
+try:
+    response = llm.invoke(messages)
+
+    print("=" * 70)
+    print("FINAL ANSWER")
+    print("=" * 70)
+
+    print(response.content)
+
+except Exception as e:
+    print("❌ Gemini Error:")
+    print(e)

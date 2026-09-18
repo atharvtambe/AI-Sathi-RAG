@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 
 load_dotenv()
 
@@ -10,10 +10,9 @@ load_dotenv()
 PERSIST_DIRECTORY = "db/chroma_db"
 
 # Use the SAME embedding model used during ingestion
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
-    google_api_key=os.getenv("GOOGLE_API_KEY")
-)
+embedding_model = OllamaEmbeddings(
+        model="nomic-embed-text"
+    )
 
 # Load existing Chroma vector store
 db = Chroma(
